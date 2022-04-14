@@ -17,7 +17,7 @@ class Chain {
      * Initialize the chain with no records
      */
     constructor() {
-        this.chian = [new Block("", new Transaction(1000, "temp", "temp"))];
+        this.chain = [new Block("", new Transaction(1000, "temp", "temp"))];
     }
 
     /**
@@ -26,7 +26,7 @@ class Chain {
      */
      getPreviousBlockHash() {
         //send the entire block itself
-        return this.chain[this.chain.length() -1].getHash();
+        return this.chain[this.chain.length - 1].getHash();
     }
 
     /**
