@@ -1,4 +1,6 @@
 const express = require("express");
+const passport = require("passport")
+const LocalStrategy = require('passport-local')
 const Users = require("../models/users.js");
 const bcrypt = require('bcrypt');
 const encrypt = require("../services/encryptPassword");
@@ -7,37 +9,46 @@ const server = express();
 
 server.use(express.json());
 
-server.post("/auth/login", async (req, res) => {
-  const { username, password } = req.body;
+passport.use(
+  new LocalStrategy(
+    async (username, password, done) => {
 
-  const user = await Users.findOne({ username });
-  if (!user) {
-    res.status(401).json({
-      message: "Login not successful",
-      error: "401: User not found",
-    });
-  } else {
-    
-    let validPassword;
-    await encrypt.comparePassword(password, user.password).then((res) => {
-      validPassword = res
-    });
+      const user = await Users.findOne({ username });
+      if (!user) {
+        return done(null, false, { message: "401: User not found.\n" });
+      } else {
 
-    if (!validPassword) {
-      res.status(402).json({
-        message: "Incorrect password!",
-        error: "402: Incorrect password",
-      });
-    } else {
-      if (user.provider === "register") {
-        await Users.updateOne(user, { lastLogin: new Date() });
-        res.status(200).json({
-          message: "Login successful",
-          user,
+        let validPassword;
+        await encrypt.comparePassword(password, user.password).then((res) => {
+          validPassword = res
         });
+
+        if (!validPassword) {
+          return done(null, false, { message: "Incorrect password!\n" });
+        } else {
+          if (user.provider === "register") {
+            await Users.updateOne(user, { lastLogin: new Date() });
+            return done(null, user);
+          }
+        }
       }
     }
-  }
+  )
+)
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
 });
+
+passport.deserializeUser( (obj, done) => {
+  done(null, obj)
+})
+
+server.post("/auth/login", passport.authenticate('local', {
+   failureMessage: true
+}),
+  (req, res) => {
+    res.redirect(`/api/users/${req.session.passport.user.id}`)
+  })
 
 module.exports = server;
